@@ -5,6 +5,9 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 import random
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 
 def while_list(orig_list, max_attempts=100):
 
@@ -33,11 +36,22 @@ def random_select(orig_list):
 
 # 定義發送郵件的函數
 def send_email():
+
+    env_path = Path(__file__).parent / ".env"
+    load_dotenv(dotenv_path=env_path)
+
+    # 測試印出
+    sender_email = os.getenv("SENDER_EMAIL")
+    sender_password = os.getenv("SENDER_PASSWORD")
+
+    # print("讀取到的 Email:", sender_email)
+    # print("讀取到的 Password:", sender_password)
+
+    # 確認變數有成功讀取（如果沒有 .env 檔案會回傳 None）
+    if not sender_email or not sender_password:
+        messagebox.showerror("錯誤：找不到電子郵件或密碼，請檢查 .env 檔案。")
+        return
     
-    sender_email = "boli.1004o0@gmail.com"  # 寄件人 Email
-    sender_password = "wexi cvig huon rnqi"        # 寄件人 Email 密碼（建議使用應用程式密碼）
-    #receiver_email = email_entry.get()       # 取收件人的 Email
-    #receiver_email = 'cks012340@gmail.com'
     subject = subject_entry.get()            # 取郵件主題
     # body = body_text.get("1.0", tk.END)      # 取郵件內容
     # 获取文本框的所有内容
@@ -46,42 +60,44 @@ def send_email():
     content_list = content.splitlines()
     #print(content_list)  # 输出结果，或者可以在其他地方使用
     index_mapping = random_select(content_list)
+    if len(index_mapping)<=1:
+        messagebox.showerror("錯誤", f"需輸入至少兩人")
+    else:
+        for key,value in index_mapping.items():
+            print('key,value')
+            print(key,value)
+            for sub_k,sub_v in value.items():
+                #print('sub_k,sub_v')
+                #print(sub_k,sub_v)
+                receiver_email = sub_k.split(':')[1]
+                body = f'Hi, \n恭喜抽到{sub_v.split(':')[0]}! 準備好您{ os.getenv("MONEY")}的買一個酷酷的禮物送他!'
+            with open('MariahCarey.jpg','rb') as file:
+                image_data = file.read()
+            img = MIMEImage(image_data,name = 'MariahCarey.jpg')
+            if not receiver_email or not subject or not body:
+                messagebox.showerror("錯誤", "所有欄位都是必填的")
+                return
 
-    for key,value in index_mapping.items():
-        print('key,value')
-        print(key,value)
-        for sub_k,sub_v in value.items():
-            #print('sub_k,sub_v')
-            #print(sub_k,sub_v)
-            receiver_email = sub_k.split(':')[1]
-            body = f'Hi, \n恭喜抽到{sub_v.split(':')[0]}! 準備好您的500到1000塊買一個酷酷的禮物送他!'
-        with open('MariahCarey.jpg','rb') as file:
-            image_data = file.read()
-        img = MIMEImage(image_data,name = 'MariahCarey.jpg')
-        if not receiver_email or not subject or not body:
-            messagebox.showerror("錯誤", "所有欄位都是必填的")
-            return
+            # 構建郵件
+            msg = MIMEMultipart()
+            msg['From'] = sender_email
+            msg['To'] = receiver_email
+            msg['Subject'] = subject
+            msg.attach(MIMEText(body, 'plain'))
+            msg.attach(img)
 
-        # 構建郵件
-        msg = MIMEMultipart()
-        msg['From'] = sender_email
-        msg['To'] = receiver_email
-        msg['Subject'] = subject
-        msg.attach(MIMEText(body, 'plain'))
-        msg.attach(img)
+            try:
+                # 設定 SMTP 伺服器（此處以 Gmail 為例）
+                server = smtplib.SMTP('smtp.gmail.com', 587)
+                server.starttls()  # 開啟加密傳輸
+                server.login(sender_email, sender_password)
+                server.sendmail(sender_email, receiver_email, msg.as_string())
+                server.quit()
 
-        try:
-            # 設定 SMTP 伺服器（此處以 Gmail 為例）
-            server = smtplib.SMTP('smtp.gmail.com', 587)
-            server.starttls()  # 開啟加密傳輸
-            server.login(sender_email, sender_password)
-            server.sendmail(sender_email, receiver_email, msg.as_string())
-            server.quit()
-
-            #messagebox.showinfo("成功", "郵件已成功發送！")
-        except Exception as e:
-            messagebox.showerror("錯誤", f"郵件發送失敗: {e}")
-    messagebox.showinfo("成功", "郵件已成功發送！")
+                #messagebox.showinfo("成功", "郵件已成功發送！")
+            except Exception as e:
+                messagebox.showerror("錯誤", f"郵件發送失敗: {e}")
+        messagebox.showinfo("成功", "郵件已成功發送！")
 # 建立 tkinter 窗口
 root = tk.Tk()
 root.title("寄信程式")
